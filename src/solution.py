@@ -10,6 +10,7 @@ import matplotlib
 import matplotlib.pyplot as plotter
 import warnings  
 warnings.filterwarnings('ignore')
+pd.set_option('precision', 2)
 
 MULCH_DECREMENT_RATE = 0.15
 def csvReader(file):
@@ -133,8 +134,9 @@ plot.savefig('scatter.png')
  ################################################################################################# 
 
 
+print(f"main_df without cols for overall predictor: {main_df.drop(columns = ['Weekly Yield (lbs of berries)', 'Nutrition %', 'Watering (gallons)', 'Fertilizer (cubic feet)', 'Mulch (inches)', 'Rain (gallons)'])}") 
 X = np.array(main_df.drop(columns = ['Weekly Yield (lbs of berries)', 'Nutrition %', 'Watering (gallons)', 'Fertilizer (cubic feet)', 'Mulch (inches)', 'Rain (gallons)'])) 
-X = preprocessing.scale(X) # scale the input array to make it easier to use
+x = preprocessing.scale(X) # scale the input array to make it easier to use
 y = np.array(main_df['Weekly Yield (lbs of berries)']) # set up output array to be the pounds of berries
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.1) # puts results of testing and training into the X_train, y_train, X_test, and y_test vars. The test size is set up as 0.2, and the 
 mainPredictor = algorithmSelector(X_train, y_train, X_test, y_test)
@@ -169,12 +171,11 @@ plot = sb.heatmap(cm,
 fig = plot.get_figure()
 fig.savefig('moistureCorrelation.png')
 print("Saved figure")
-#
 
 # next step: 
 # check about relationship to moisture, and see what the biggest correlators are there
- 
-X = np.array(main_df.drop(columns=['Weekly Yield (lbs of berries)', 'Moisture %', 'Sun/TempF', 'Nutrition %', 'Fertilizer (cubic feet)'])) # the best predictor for moisture % I have so far
+print(f"main_df without cols for moisture: {main_df.drop(columns=['Weekly Yield (lbs of berries)', 'Moisture %', 'Sun/TempF', 'Nutrition %', 'Fertilizer (cubic feet)', 'Rain (gallons)'])}") 
+X = np.array(main_df.drop(columns=['Weekly Yield (lbs of berries)', 'Moisture %', 'Sun/TempF', 'Nutrition %', 'Fertilizer (cubic feet)', 'Rain (gallons)'])) # the best predictor for moisture % I have so far
 X = np.array(main_df[['Mulch (inches)','Watering (gallons)']]) # best moisture model i have so far
 y = np.array(main_df['Moisture %']) # set up output array to be the pounds of berries
 X = preprocessing.scale(X) # scale the input array to make it easier to use
@@ -203,55 +204,64 @@ output_df['Fertilizer added (cubic feet)'] = 0 # will this be needed?
 
 # mulch, water
 
-mulch = 0
-water = 0
+#mulch = 0
+#water = 0
+#
+#
+## start mulch at 0, water at 0, increase each until 
+#
+#print("Checking moisture model")
+#i = 0
+#while i < 1000:
+#    mulch += .01
+#    water += 0.1
+#    moistureArray = np.array([mulch, 3]).reshape(1, -1)
+##    print(moistureArray)
+#    predictedMoisture = moisturePredictor.predict(moistureArray)
+#    if predictedMoisture > 0:
+#        
+#        print(f"Array: {moistureArray}")
+#        print(f"Predicted value: {predictedMoisture}")
+#    i += 1
+#
+#while True:
+#    pass
 
 
-# start mulch at 0, water at 0, increase each until 
-
-print("Entering looop")
-i = 0
-while i < 1000:
-    mulch += .01
-    water += 0.1
-    moistureArray = np.array([0.4, water]).reshape(1, -1)
-#    print(moistureArray)
-    predictedMoisture = moisturePredictor.predict(moistureArray)
-    if predictedMoisture > 0:
-        
-        print(f"Array: {moistureArray}")
-        print(f"Predicted value: {predictedMoisture}")
-    i += 1
-
-while True:
-    pass
 
 
-
-
-# begin algorithm loop
-for week in range(1, len(output_df)):
-    if week == 1 or output_df.loc[week-1, 'Current Mulch'] < 0: # on first iteration
-        currentMulch = 0
+# for each week in the total forcast
+for week in range(0, len(output_df)):
+    print(f'\n\nWeek {week}')
+    # if it's the first week or the current amount of mulch < 0,
+    # set the amount of mulch to be 0.4
+    if week == 0 or output_df.loc[week-1, 'Current Mulch'] < 0.4: # on first iteration
+        currentMulch = 0.4
     else:
-        currentMulch = output_df.loc[week-1, 'Current Mulch'] - MULCH_DECREMENT_RATE
-
+    # otherwise, set the amount of mulch to be the current amount - 0.15 according to empirical data
+        prevMulch = output_df.loc[week-1, 'Current Mulch']
+        currentMulch = prevMulch - MULCH_DECREMENT_RATE
+        print(f'mulch from last week : {prevMulch}')
+    # get the current amount of sun coming in for the current week
     currentSun = output_df.loc[week, 'Sun/Temp Forecast (F)']
 #    print(f"current mulch: {currentMulch}")
+    # set up the max yield of the week to be zero
     maxYield = 0
 #BEGIN WATER PREDICTION
+    # variable to hold the value of the best amount of water to add
     bestWater = 0
-    for water in range(0, 30):
+    for water in range(3, 30):
         # take in mulch and water
-
+        # create a moisture array with the amount of water as the independant varible
+        # and the mulch held constant
         moistureArray = np.array([currentMulch, water]).reshape(1, -1)
-#        print(moistureArray)
+        print(f'moistureArray from watering: {moistureArray}')
         predictedMoisture = moisturePredictor.predict(moistureArray)
-        print(predictedMoisture) # LINE THAT IS CAUSING THE PROBLEM
+        print(f"predictedMoisture: {predictedMoisture}") # LINE THAT IS CAUSING THE PROBLEM
         # assuming that moisture comes first rather than sun/tempF
         yieldArray = np.array([predictedMoisture, currentSun]).reshape(1, -1)
         currentYield = mainPredictor.predict(yieldArray) 
-        print(f'Current yield for water: {currentYield}\n')
+#        print(f'Current yield for water: {currentYield}\n')
         if currentYield > maxYield:
 #            print("Water making max yield")
             bestWater = water
@@ -265,8 +275,9 @@ for week in range(1, len(output_df)):
     while mulchToAdd < 8:
         # create array to predict on with current mulch and the best water
         moistureArray = np.array([currentMulch + mulchToAdd, bestWater]).reshape(1, -1)
-#        print(moistureArray)
+        print(f'Moisture array from mulch: {moistureArray}')
         predictedMoisture = moisturePredictor.predict(moistureArray)
+        print(f"predictedMoisture: {predictedMoisture}") # LINE THAT IS CAUSING THE PROBLEM
         yieldArray = np.array([predictedMoisture, currentSun]).reshape(1, -1)
         currentYield = mainPredictor.predict(yieldArray) 
         # check if the yield is better with the addition of mulch
@@ -274,15 +285,19 @@ for week in range(1, len(output_df)):
         if currentYield > maxYield:
             bestMulch = mulchToAdd
             maxYield = currentYield
+#            print(f'Mulch yield changing: {maxYield}')
         
         # add to the ideal amount of mulch to add
         mulchToAdd += 0.1 
 
     output_df['Mulch added (inches)'][week] = bestMulch
+    print(f'Mulch added: {bestMulch}')
+    print(f'current mulch at end: {currentMulch}')
+    
     output_df['Current Mulch'][week] = currentMulch + bestMulch
+    print(f"Array value: {output_df['Current Mulch'][week]}")
     output_df['Watering (gallons)'][week] = bestWater
     output_df['Yield'][week] = maxYield # will this be needed?
-
 
 
 
