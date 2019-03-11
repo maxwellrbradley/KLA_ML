@@ -1,6 +1,7 @@
 ################################################################################################
 # OVERALL PROGRAM FLOW AND DESIGN CHOICES
 ################################################################################################
+
 # read the farmer data in
 # look at the overall stats on the incoming data
 # get information on the label (Weekly Yield of berries)
@@ -43,19 +44,17 @@
 ###############################################################################################
 # assumptions made
 ###############################################################################################
+
 # 0.15 inches of mulch are lost a week. This number was found by looking at the rate of decrease of mulch
 # from the incoming data
 
 ###############################################################################################
 # notes about running code
 ###############################################################################################
+
 # this code was run in a virtual environment running python3.7
 # to make this program work for another computer, the paths to the input and output
 # files will need to be adjusted
-
-
-
-
 
 ###############################################################################################
 # BEGIN SOURCE CODE
@@ -112,8 +111,6 @@ def algorithmSelector(X_train, y_train, X_test, y_test):
         clf.fit(X_train, y_train) 
         # check R^2 value, measure of accuracy
         confidence = clf.score(X_test, y_test) 
-        # prints the confidence and model
-        print(f"Confidence: {confidence} with model: {k}")
         # sets classifier to the back of the array
         classifiers.append(clf)
          # if the confidence level is higher for this model
@@ -241,7 +238,6 @@ y = np.array(main_df['Weekly Yield (lbs of berries)'])
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.1)
 # set the main overall predictor to be the output of the machine learning algorithm
 # machine learning algorithm defined on line 25
-print("About to do a main prediction")
 mainPredictor = algorithmSelector(X_train, y_train, X_test, y_test)
 
 ################################################################################################
@@ -257,7 +253,6 @@ X = preprocessing.scale(X)
 # split up testing and training with 90/10 training and testing split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.1)
 # create moisture predictor based on the machine learning algorithm defined on line 25
-print("About to do a water prediction")
 moisturePredictor = algorithmSelector(X_train, y_train, X_test, y_test)
 
 ################################################################################################
@@ -296,9 +291,7 @@ for week in range(0, len(output_df)):
     else:
     # otherwise, set the amount of mulch to be the current amount - 0.15 according to empirical data
         prevMulch = output_df.loc[week-1, 'Current Mulch']
-        print(f"Previous mulch: {prevMulch}")
         currentMulch = prevMulch - MULCH_DECREMENT_RATE
-        print(f"current mulch: {currentMulch}")
     # get the current amount of sun coming in for the current week
     currentSun = output_df.loc[week, 'Sun/Temp Forecast (F)']
     # set up the max yield of the week to be zero
@@ -342,14 +335,10 @@ for week in range(0, len(output_df)):
             maxYield = currentYield
         
         # add to the ideal amount of mulch to add
-        #mulchToAdd += 0.1 
         mulchToAdd += 1 
     # when the loop completes, fill in the output data frame
 
     output_df['Mulch added (inches)'][week] = bestMulch
-    print(f"Current mulch: {currentMulch}")
-    print(f"Best mulch: {bestMulch}")
-    print(f"Prev mulch: {prevMulch}")
     output_df['Current Mulch'][week] = currentMulch + bestMulch
     output_df['Watering (gallons)'][week] = bestWater
 
