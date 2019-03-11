@@ -1,27 +1,105 @@
+################################################################################################
+# OVERALL PROGRAM FLOW AND DESIGN CHOICES
+################################################################################################
+# read the farmer data in
+# look at the overall stats on the incoming data
+# get information on the label (Weekly Yield of berries)
+    # 'label' is a machine learning term that is the output that you're looking to predict
+    # a 'feature' is the converse of the label, the data that you are using to predict the label
+# plot a distribution graph of the incoming label (yield)
+# create a correlation heatmap to see the relationship between the label and other vars
+    # this is to figure out whether any variables should be dropped because their 
+    # correlations are too high to hold any valuable information independantly
+    # we will use this data to create an overall prediction model
+# create a correlation heatmap between moisture and all variables except for the label
+    # this is because moisture is a strong influencer of the label according to the
+    # correlation chart, and because it is not directly controlled, it needs to predicted
+    # we will use this data to create a moisture prediction model
+# create a scatter plot for more data visualization
+###############################################################################################
+# now that the graphs have been created, begin the number crunching
+###############################################################################################
+# create a yield prediction model using only moisture and sun/temp inputs
+    # this is because these two variables correlated strongly with the yield and adding 
+    # other variables into the mix decreased the R^2 cofficent (our measure of accuracy)
+# create a moisture prediction model with only mulch and the watering in gallons
+    # like the yield prediction model, only these features were used because they correlated 
+    # strongly with the moisture percentage
+# read in the output data provided by Robert that contained the forecast for the coming year
+# optimize yield
+    # for all the weeks in the forecast
+        # change the amount of water
+            # predict the amount of moisture that is associated with the mulch from the last week
+            # predict the yield associated with that moisture and sun/temp
+            # if the yield is higher than the previously predicted yields, save that amount of water
+        # change the amount of mulch
+            # predict the amount of moisture that is associated with that mulch and the water from the last step
+            # predict the yield associated with that moisture and sun/temp
+            # if the yield is higher than the previously predicted yields, save that amount of mulch
+        
+        # save the most yielding water and most yielding mulch to the output spreadsheets
+   # save the output data to the spreadsheet
+
+###############################################################################################
+# assumptions made
+###############################################################################################
+# 0.15 inches of mulch are lost a week. This number was found by looking at the rate of decrease of mulch
+# from the incoming data
+
+###############################################################################################
+# notes about running code
+###############################################################################################
+# this code was run in a virtual environment running python3.7
+# to make this program work for another computer, the paths to the input and output
+# files will need to be adjusted
+
+
+
+
+
+###############################################################################################
+# BEGIN SOURCE CODE
+###############################################################################################
+
+# import data frame library
 import pandas as pd
-import quandl, math
-import numpy as np
+# import numpy lib for data processing
+import numpy as np 
+# NOTE: sklearn is a python machine learning library
+# import preprocessing and support vector machine that contains 
+# machine learning functions
 from sklearn import preprocessing, svm
-from sklearn.model_selection import cross_validate
+# import data splitting
 from sklearn.model_selection import train_test_split 
-from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import cross_validate 
+# import graphing library
 import seaborn as sb
+# import python plotting lib
 import matplotlib
+# import lib to show plots in realtime
 import matplotlib.pyplot as plotter
+# shut off warnings because constantly on in machine learning
 import warnings  
 warnings.filterwarnings('ignore')
+# set the precision out the output to 2 decimal places
 pd.set_option('precision', 2)
-
+# set up the decrement rate of mulch to be 0.15, found from data
 MULCH_DECREMENT_RATE = 0.15
+
+################################################################################################
+# HELPER FUNCTIONS
+################################################################################################
+
+# create function to read in csv file
 def csvReader(file):
-    return pd.read_csv(file, sep=",") # open file with , splitter
+    # open file with , splitter
+    return pd.read_csv(file, sep=",") 
 
 # MACHINE LEARNING ALGORITHM
 # run data through a particular regression kernel
 # train the model on the data
 # check to see accuracy of model
 # return the regression classifer with the highest score
-
 def algorithmSelector(X_train, y_train, X_test, y_test):
     # take data set, run data sets through each and return the classfier with the best confidence level
     classifiers = []
@@ -30,22 +108,27 @@ def algorithmSelector(X_train, y_train, X_test, y_test):
     
     for num, k in enumerate(['linear','poly','rbf','sigmoid']): # enumerates over all possible types of kernels
         clf = svm.SVR(kernel=k, gamma='auto')
-        clf.fit(X_train, y_train) # train model on X_test and y_test
-        confidence = clf.score(X_test, y_test) # check R^2 value, measure of accuracy
-        print(f"Confidence: {confidence} with model: {k}") # prints the confidence and model
-        classifiers.append(clf) # sets classifier to the back of the array
-        if confidence > maxConfidence: # if the confidence level is higher for this model
-            maxConfidence = confidence # set max confidence to check which index to return 
-            indexToReturn = num # sets the index to return the most accurate model
+        # train model on X_test and y_test
+        clf.fit(X_train, y_train) 
+        # check R^2 value, measure of accuracy
+        confidence = clf.score(X_test, y_test) 
+        # prints the confidence and model
+        print(f"Confidence: {confidence} with model: {k}")
+        # sets classifier to the back of the array
+        classifiers.append(clf)
+         # if the confidence level is higher for this model
+        if confidence > maxConfidence:
+            # set max confidence to check which index to return 
+            maxConfidence = confidence 
+            # sets the index to return the most accurate model
+            indexToReturn = num 
 
     return classifiers[indexToReturn]
 
-
-#SCRIPT BEGINS HERE
-            
 ################################################################################################
 # PROCESS INCOMING DATA
 ################################################################################################
+
 # read in data from csv file
 main_df = csvReader('~/Documents/Work/Internships/KLA_PE/data/farmerData.csv')
 # fills parts of incoming data that don't have a value with 0 
@@ -67,7 +150,7 @@ plot = sb.distplot(main_df['Weekly Yield (lbs of berries)'],  color='blue', bins
 plotter.xlabel('Yield of Berries') # labels x axis 
 plotter.ylabel('Samples distributed') # labels y axis
 fig = plot.get_figure() # gets figure
-fig.savefig('distribution.png')# saves figure
+fig.savefig('distribution.png') # saves figure
 
 ################################################################################################
 # CREATE CORRELATION GRAPH BETWEEN OVERALL YIELD AND ALL OTHER VARIABLES
@@ -102,42 +185,11 @@ fig = plot.get_figure()
 fig.savefig('correlation.png') 
 
 ################################################################################################
-# CREATE SCATTER PLOT
+# CREATE CORRELATION GRAPH BETWEEN MOISTURE % AND ALL OTHER VARIABLES
 ################################################################################################
 
-# get columns to create scatter plot between
-columns = ['Weekly Yield (lbs of berries)', 'Moisture %', 'Sun/TempF', 'Fertilizer (cubic feet)', 'Watering (gallons)', 'Nutrition %', 'Mulch (inches)', 'Rain (gallons)']
-# create scatter plot
-sb.set()
-plot = sb.pairplot(main_df[columns],size=2, kind='scatter', vars=columns, diag_kind='kde') 
-# save figure
-plot.savefig('scatter.png')
-
-
-#################################################################################################
-## STEP 0: CREATE MODEL FOR PREDICTING YIELD OF BERRIES WITH HIGH ACCURACY
- ################################################################################################# 
-
-# set up the input to the training and testing to be only the moisture % and the sun/tempF 
-#because of their high correlations
-X = np.array(main_df.drop(columns = ['Weekly Yield (lbs of berries)', 'Nutrition %', 'Watering (gallons)', 'Fertilizer (cubic feet)', 'Mulch (inches)', 'Rain (gallons)'])) 
-# scale the input array to make processing faster
-x = preprocessing.scale(X) 
-# make the output array the thing we want to predict, aka the label
-y = np.array(main_df['Weekly Yield (lbs of berries)']) 
-# set up the arrays to test and train on by splitting up the main data frame into a data input and 
-# output to train on, and then an input and output to test the data on
-# split: 90% train, 10% test 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.1)
-# set the main overall predictor to be the output of the machine learning algorithm
-# machine learning algorithm defined on line 25
-mainPredictor = algorithmSelector(X_train, y_train, X_test, y_test)
-
-################################################################################################
-## STEP 1: CREATE MOISTURE PREDICTION MODEL
-#################################################################################################
-# look at the 8 largest correlations
-k = 8  
+# look at the 7 largest correlations
+k = 7  
 # drop the label because not looking for correlation between label and moisture
 correlation = main_df.drop(columns=['Weekly Yield (lbs of berries)']).corr()
 cols = correlation.nlargest(k, 'Moisture %')['Moisture %'].index
@@ -158,10 +210,45 @@ plot = sb.heatmap(cm,
 # save the moisture correlation plot
 fig = plot.get_figure()
 fig.savefig('moistureCorrelation.png')
-# next step: 
-# check about relationship to moisture, and see what the biggest correlators are there
-#print(f"main_df without cols for moisture: {main_df.drop(columns=['Weekly Yield (lbs of berries)', 'Moisture %', 'Sun/TempF', 'Nutrition %', 'Fertilizer (cubic feet)', 'Rain (gallons)'])}") 
-# drop all columns except mulch in inches and watering gallons because of their high correlation with moisture %
+
+################################################################################################
+# CREATE SCATTER PLOT
+################################################################################################
+
+# get columns to create scatter plot between
+columns = ['Weekly Yield (lbs of berries)', 'Moisture %', 'Sun/TempF', 'Fertilizer (cubic feet)', 'Watering (gallons)', 'Nutrition %', 'Mulch (inches)', 'Rain (gallons)']
+# create scatter plot
+sb.set()
+plot = sb.pairplot(main_df[columns],size=2, kind='scatter', vars=columns, diag_kind='kde') 
+# save figure
+plot.savefig('scatter.png')
+
+#################################################################################################
+## STEP 1: CREATE MODEL FOR PREDICTING YIELD OF BERRIES WITH HIGH ACCURACY
+################################################################################################# 
+
+# set up the input to the training and testing to be only the moisture % and the sun/tempF 
+# because of their high correlations
+print(f"Array before overall prediction: \n{main_df.drop(columns = ['Weekly Yield (lbs of berries)', 'Nutrition %', 'Watering (gallons)', 'Fertilizer (cubic feet)', 'Mulch (inches)', 'Rain (gallons)'])}")
+X = np.array(main_df.drop(columns = ['Weekly Yield (lbs of berries)', 'Nutrition %', 'Watering (gallons)', 'Fertilizer (cubic feet)', 'Mulch (inches)', 'Rain (gallons)'])) 
+# scale the input array to make processing faster
+x = preprocessing.scale(X) 
+# make the output array the thing we want to predict, aka the label
+y = np.array(main_df['Weekly Yield (lbs of berries)']) 
+# set up the arrays to test and train on by splitting up the main data frame into a data input and 
+# output to train on, and then an input and output to test the data on
+# split: 90% train, 10% test 
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.1)
+# set the main overall predictor to be the output of the machine learning algorithm
+# machine learning algorithm defined on line 25
+print("About to do a main prediction")
+mainPredictor = algorithmSelector(X_train, y_train, X_test, y_test)
+
+################################################################################################
+## STEP 2: CREATE MOISTURE PREDICTION MODEL
+#################################################################################################
+
+print(f"Array before overall prediction: \n{main_df[['Mulch (inches)','Watering (gallons)']]}")
 X = np.array(main_df[['Mulch (inches)','Watering (gallons)']])
 # set up output array to be the pounds of berries
 y = np.array(main_df['Moisture %']) 
@@ -170,170 +257,104 @@ X = preprocessing.scale(X)
 # split up testing and training with 90/10 training and testing split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.1)
 # create moisture predictor based on the machine learning algorithm defined on line 25
+print("About to do a water prediction")
 moisturePredictor = algorithmSelector(X_train, y_train, X_test, y_test)
 
 ################################################################################################
-# STEP 3: READ IN OUTPUT DATASET WITH SUN/TEMPF, RAINFALL, CURRENT MULCH, CURRENT FERT
+## STEP 3: READ IN OUTPUT DATASET WITH SUN/TEMPF, RAINFALL, CURRENT MULCH, CURRENT FERT
 # MULCH TO ADD, FERT TO ADD
 ################################################################################################
+
 # read in the weather data sheet
 output_df = csvReader('~/Documents/Work/Internships/KLA_PE/data/weather.csv')
-# set up the current mulch of the whole system to be 0
+# initialize data set with cleared values and set up as a float array
 output_df['Current Mulch'] = 0
-# clear the watering of all weeks
+output_df['Current Mulch'] = output_df['Current Mulch'].astype('float64')
 output_df['Watering (gallons)'] = 0
-# clear the yield of all weeks
-output_df['Yield'] = 0 # will this be needed?
-output_df['Mulch added (inches)'] = 0 # will this be needed?
-output_df['Fertilizer (cubic feet)'] = 0 # will this be needed?
-output_df['Fertilizer added (cubic feet)'] = 0 # will this be needed?
+output_df['Watering (gallons)'] = output_df['Watering (gallons)'].astype('float64')
+output_df['Mulch added (inches)'] = 0 
+output_df['Mulch added (inches)'] = output_df['Mulch added (inches)'].astype('float64')
+output_df['Fertilizer (cubic feet)'] = 0
+output_df['Fertilizer (cubic feet)']= output_df['Fertilizer (cubic feet)'].astype('float64')
+output_df['Fertilizer added (cubic feet)'] = 0
+output_df['Fertilizer added (cubic feet)'] = output_df['Fertilizer added (cubic feet)'].astype('float64')
+print(output_df.info())
+
+
 ################################################################################################
-# STEP 4: ENTER MAIN ALGORITHM
+## STEP 4: OPTIMIZE YIELD
 ################################################################################################
 
 # for each week in the total forcast
 for week in range(0, len(output_df)):
     print(f'\n\nWeek {week}')
     # if it's the first week or the current amount of mulch < 0,
-    # set the amount of mulch to be 0.4
-    if week == 0 or output_df.loc[week-1, 'Current Mulch'] < 0.4: # on first iteration
-        currentMulch = 0.4
+    # set the amount of mulch to be 0
+    if week == 0 or output_df.loc[week-1, 'Current Mulch'] - MULCH_DECREMENT_RATE <= 0: # on first iteration
+        currentMulch = 0
+        prevMulch = 0
     else:
     # otherwise, set the amount of mulch to be the current amount - 0.15 according to empirical data
         prevMulch = output_df.loc[week-1, 'Current Mulch']
+        print(f"Previous mulch: {prevMulch}")
         currentMulch = prevMulch - MULCH_DECREMENT_RATE
-        print(f'mulch from last week : {prevMulch}')
+        print(f"current mulch: {currentMulch}")
     # get the current amount of sun coming in for the current week
     currentSun = output_df.loc[week, 'Sun/Temp Forecast (F)']
-#    print(f"current mulch: {currentMulch}")
     # set up the max yield of the week to be zero
     maxYield = 0
-#BEGIN WATER PREDICTION
-    # variable to hold the value of the best amount of water to add
+    #BEGIN WATER PREDICTION
     bestWater = 0
     for water in range(3, 30):
         # take in mulch and water
         # create a moisture array with the amount of water as the independant varible
         # and the mulch held constant
         moistureArray = np.array([currentMulch, water]).reshape(1, -1)
-        print(f'moistureArray from watering: {moistureArray}')
+        # predict the amount of moisture for the watering and mulch
         predictedMoisture = moisturePredictor.predict(moistureArray)
-        print(f"predictedMoisture: {predictedMoisture}") # LINE THAT IS CAUSING THE PROBLEM
-        # assuming that moisture comes first rather than sun/tempF
+        # set up the array to predict yield with 
         yieldArray = np.array([predictedMoisture, currentSun]).reshape(1, -1)
+        # get current yield using the overall predictor
         currentYield = mainPredictor.predict(yieldArray) 
-#        print(f'Current yield for water: {currentYield}\n')
+        # if the yield predicted is greater than the max yield, set the max to that value
         if currentYield > maxYield:
-#            print("Water making max yield")
+            # save the water value for futre trials
             bestWater = water
             maxYield = currentYield
-#        print(maxYield)
-
-# BEGIN MULCH PREDICTION
-    maxYield = 0
+    # BEGIN MULCH PREDICTION
+    # reset max yield
+    maxYield = 0 
     bestMulch = 0
     mulchToAdd = 0
     while mulchToAdd < 8:
         # create array to predict on with current mulch and the best water
         moistureArray = np.array([currentMulch + mulchToAdd, bestWater]).reshape(1, -1)
-        print(f'Moisture array from mulch: {moistureArray}')
+        # predict the moisture with the mulch value and the water from the water prediction
         predictedMoisture = moisturePredictor.predict(moistureArray)
-        print(f"predictedMoisture: {predictedMoisture}") # LINE THAT IS CAUSING THE PROBLEM
+        # set up the yield array with the predicted moisture
         yieldArray = np.array([predictedMoisture, currentSun]).reshape(1, -1)
+        # predict the yield for that moisture
         currentYield = mainPredictor.predict(yieldArray) 
-        # check if the yield is better with the addition of mulch
-#        print(f'Current yield for mulch: {currentYield}')
+        # if the yield predicted is greater than the max yield, set the max to that value
+        # mark that amount of mulch to add to be ideal
         if currentYield > maxYield:
             bestMulch = mulchToAdd
             maxYield = currentYield
-#            print(f'Mulch yield changing: {maxYield}')
         
         # add to the ideal amount of mulch to add
-        mulchToAdd += 0.1 
+        #mulchToAdd += 0.1 
+        mulchToAdd += 1 
+    # when the loop completes, fill in the output data frame
 
     output_df['Mulch added (inches)'][week] = bestMulch
-    print(f'Mulch added: {bestMulch}')
-    print(f'current mulch at end: {currentMulch}')
-    
+    print(f"Current mulch: {currentMulch}")
+    print(f"Best mulch: {bestMulch}")
+    print(f"Prev mulch: {prevMulch}")
     output_df['Current Mulch'][week] = currentMulch + bestMulch
-    print(f"Array value: {output_df['Current Mulch'][week]}")
     output_df['Watering (gallons)'][week] = bestWater
-    output_df['Yield'][week] = maxYield # will this be needed?
 
-
-
-print(f"Final output:\n\n{output_df}")
+################################################################################################
+## STEP 5: OUTPUT TO SPREADSHEET
+################################################################################################
 
 output_df.to_csv(r'data/output.csv')
-
-
-        # add 0.1 inches of mulch to the overall amount
-
-
-
-
-#https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.at.html#pandas.DataFrame.at
-#    input = np.array([output_df.at[i, 'Moisture %'], output_df.at[i, 'Sun/Temp Forecast (F)'], output_df.at[i, 'Watering (gallons)']])
-#    print(f"Prediction with 75, 0, 0: {mainClassifier.predict(np.array([75,0, 0]).reshape(1, -1))}")
-#    input = input.reshape(1,-1)
-#    output_df.at[i, 'Yield'] = mainClassifier.predict(input)
-    
-
-
-
-
-
-
-
-
-
-#x_input = np.array([97, 82, 73]) # feeds a new array into the model and runs the classifier on it
-#x_input = np.array([0, 0, 0]) # feeds a new array into the model and runs the classifier on it
-
-#x_input = main_df.loc[78, ['Nutrition Lvl %', 'Moisture %', 'Sun/TempF']]
-#print(f"x_input before processing:\n{x_input}")
-#x_input = preprocessing.scale(x_input)
-#x_input = np.array(x_input)
-##print(x_input)
-#x_input = x_input.reshape(1, -1) # reshapes the array because it's a single sample
-#
-#print(clf.predict(x_input)) # print prediction
-
-# sets up dataframe to contain the values that we're looking for
-
-#clf = LinearRegression(n_jobs=-1) # set up linear regression training
-#clf.fit(X_train, y_train) # train the regression classifier based on the X and y input data
-#confidence = clf.score(X_test,y_test) # check to see how well the model does on the testing data
-#print(f'Confidence of linear regression: {confidence}')
-
-#forecast_col = 'Adj. Close' # set the forcasted column to be this one
-#forecast_out = int(math.ceil(0.01 * len(df))) # forcast out ten days # figure out how far out to forcast the data
-#print(f"Amount of days to predict: {forecast_out}")
-#df['Price in Thirty-Five days'] = df[forecast_col].shift(-forecast_out) # creates a new column with the results of the forcast column shifted up by the forcast var 
-#df.dropna(inplace=True) # drop n/a data sets
-#X = np.array(df.drop(['Price in Thirty-Five days'], 1)) # copies the dataframe except for the price in ten days, which is the dependant var
-#print(f"X Pre-scaling: {X}")
-#X = preprocessing.scale(X) # scale the input array to make it easier to use
-#y = np.array(df['Price in Thirty-Five days'])  # makes a new dataframe that only contains the price in ten days from the last one
-#
-#X_lately = X[-forecast_out:] # sets the lately values to be the values at the very end, where the price isn't calculated yet. In this case, it's from the end of the array back forecast out amount, to the very end, so the time from 35 days before now up until now
-#print(f"X lately values: {X_lately}")
-#X = X[:-forecast_out] # sets values from 0 to the end of the array minus forecast out
-#y = y[:-forecast_out] # sets values from 0 to the end of the array minus forecast out
-#print(f"X: {X}")
-#
-#
-#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size =0.2) # puts results of testing and training into the X_train, y_train, X_test, and y_test vars. The test size is set up as 0.2, and the train size is 0.8
-#clf = LinearRegression(n_jobs=-1) # set up linear regression training
-#
-#clf.fit(X_train, y_train) # train the regression classifier based on the X and y input data
-#
-#confidence = clf.score(X_test,y_test) # check to see how well the model does on the testing data
-#forecast_set = clf.predict(X_lately) # get the new set of X values to train on
-#print(f"Forecast_set: \n{forecast_set}")
-
-
-# for reshpaing arrays of lengh 1
-#x_input = x_input.reshape(1, -1) # reshapes the array because it's a single sample
-#X = np.array(main_df['Total Watered(gallons)'])# set up input array to be all parts except for the points of berries
-#X = X.reshape(-1, 1)
